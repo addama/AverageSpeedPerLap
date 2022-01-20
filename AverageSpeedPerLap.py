@@ -1,5 +1,3 @@
-# C:\User\My Documents\Assetto Corsa\logs
-
 import ac
 import acsys
 import configparser
@@ -40,6 +38,7 @@ getValidFileName = lambda f: ''.join(c for c in f if c in '-_() abcdefghijklmnop
 convert_to_kph = lambda m: m * 1.60934
 
 def parseConfig():
+	# Parses the config file
 	global config_ini, config_header, use_kph
 	cfg = configparser.ConfigParser()
 	cfg.read(config_ini)
@@ -55,6 +54,7 @@ def acMain(ac_version):
 	try:
 		if (exists(config_ini)):
 			parseConfig()
+		# Build the window
 		app = ac.newApp(title)
 		ac.setSize(app, 310, 33)
 		ac.setIconPosition(app, 0, -10000) # Get rid of the icon
@@ -63,6 +63,7 @@ def acMain(ac_version):
 		ac.drawBackground(app, 1)
 		ac.setBackgroundOpacity(app, background_opacity)
 
+		# Build all the labels
 		com_avg_curr_label = ac.addLabel(app, label_avg_curr)
 		ac.setPosition(com_avg_curr_label, 5, 5)
 		ac.setSize(com_avg_curr_label, 50, 16)
@@ -99,6 +100,7 @@ def acMain(ac_version):
 		ac.setFontSize(com_avg_best, 16)
 		ac.setFontAlignment(com_avg_best, 'center')
 
+		# Determine where the data file will be, then pull a previous best from it if it exists
 		car = ac.getCarName(0)
 		track = ac.getTrackName(0)
 		layout = ac.getTrackConfiguration(0)
@@ -108,7 +110,7 @@ def acMain(ac_version):
 				# Average speeds are stored in mph and converted later if the user toggled use_kph
 				prev_best = float(f.readline())
 				avg_best = prev_best
-				ac.log(title+': Found existing best in '+file+': '+str(avg_best))
+				ac.log(title+': Found existing best in '+file+': '+str(avg_best)+' mph')
 	except Exception as error:
 		ac.log(title+': '+str(error))
 	return title
@@ -139,19 +141,12 @@ def acUpdate(deltaT):
 		draw()
 
 def draw():
-	# Handles the visual updates
+	# Handles the visual updates, to include displaying as kph
 	global avg_curr, avg_prev, avg_best, use_kph
 	global com_avg_curr, com_avg_prev, com_avg_best
-	converted_curr = avg_curr
-	converted_prev = avg_prev
-	converted_best = avg_best
-	if (use_kph):
-		converted_curr = convert_to_kph(avg_curr)
-		converted_prev = convert_to_kph(avg_prev)
-		converted_best = convert_to_kph(avg_best)
-	ac.setText(com_avg_curr, str(round(converted_curr, 1)))
-	ac.setText(com_avg_prev, str(round(converted_prev, 1)))
-	ac.setText(com_avg_best, str(round(converted_best, 1)))
+	ac.setText(com_avg_curr, str(round(convert_to_kph(avg_curr) if use_kph else avg_curr, 1)))
+	ac.setText(com_avg_prev, str(round(convert_to_kph(avg_prev) if use_kph else avg_prev, 1)))
+	ac.setText(com_avg_best, str(round(convert_to_kph(avg_best) if use_kph else avg_best, 1)))
 
 def acShutdown():
 	# Write any new bests found for the current car/track/layout configuration
@@ -159,7 +154,7 @@ def acShutdown():
 	try:
 		ac.log(title+': SHUTDOWN')
 		if (avg_best > 0 and avg_best > prev_best):
-			ac.log(title+': Recording new best speed in '+file+': '+ str(avg_best))
+			ac.log(title+': Recording new best speed in '+file+': '+str(avg_best)+' mph')
 			with open(file, 'w') as f:
 				f.write(str(avg_best))
 	except Exception as error:
