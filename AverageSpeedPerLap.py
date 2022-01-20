@@ -2,14 +2,20 @@
 
 import ac
 import acsys
+import configparser
 from os.path import exists
 
 # CONFIG SETTINGS
 title = 'AverageSpeedPerLap'
-data_dir = 'apps/python/'+title+'/data/'
+base_dir = 'apps/python/'+title
+config_ini = base_dir+'/config.ini'
+config_header = 'SETTINGS'
+data_dir = base_dir+'/data/'
+data_ext = '.txt'
 use_kph = False
 use_background = True
 use_border = False
+is_horizontal = True
 
 # INTERNAL DATA
 com_avg_curr = 0
@@ -32,29 +38,42 @@ state = False
 average = lambda a: sum(a) / len(a)
 getValidFileName = lambda f: ''.join(c for c in f if c in '-_() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
 
+def parseConfig():
+	global config_ini
+	global use_kph, use_background, use_border, is_horizontal
+
+	cfg = configparser.ConfigParser()
+	cfg.read(config_ini)
+	settings = cfg[config_header]
+
+	use_kph = settings.getboolean('use_kph', use_kph)  
+	use_background = settings.getboolean('use_background', use_background)  
+	use_border = settings.getboolean('use_border', use_border)  
+	is_horizontal = settings.getboolean('is_horizontal', is_horizontal)  
+
 def acMain(ac_version):
 	global title, file, prev_best, avg_best
-	global label_avg_best, label_avg_curr, label_avg_prev# , label_speed
-	global com_avg_best, com_avg_curr, com_avg_prev# , com_speed
+	global label_avg_best, label_avg_curr, label_avg_prev
+	global com_avg_best, com_avg_curr, com_avg_prev
 	try:
+		if (exists(config_ini)):
+			parseConfig()
 		app = ac.newApp(title)
-		ac.setIconPosition(app, 0, -10000)
-		ac.setTitle(app, '')
 		ac.setSize(app, 100, 120)
+		ac.setIconPosition(app, 0, -10000) # Get rid of the icon
+		ac.setTitle(app, '') # Get rid of the title
 		ac.drawBackground(app, use_background)
 		ac.drawBorder(app, use_border)
-		com_avg_curr = ac.addLabel(app, label_avg_curr+': '+str(avg_curr));
-		com_avg_prev = ac.addLabel(app, label_avg_prev+': '+str(avg_prev));
-		com_avg_best = ac.addLabel(app, label_avg_best+': '+str(avg_best));
-		# com_speed = ac.addLabel(app, label_speed+': 0');
+		com_avg_curr = ac.addLabel(app, label_avg_curr+': '+str(avg_curr))
+		com_avg_prev = ac.addLabel(app, label_avg_prev+': '+str(avg_prev))
+		com_avg_best = ac.addLabel(app, label_avg_best+': '+str(avg_best))
 		ac.setPosition(com_avg_curr, 5, 5)
 		ac.setPosition(com_avg_best, 5, 25)
 		ac.setPosition(com_avg_curr, 5, 45)
-		# ac.setPosition(com_speed, 5, 65)
 		car = ac.getCarName(0)
 		track = ac.getTrackName(0)
 		layout = ac.getTrackConfiguration(0)
-		file = data_dir+getValidFileName(car+'-'+track+'-'+layout)+'.txt'
+		file = data_dir+getValidFileName(car+'-'+track+'-'+layout)+data_ext
 		if (exists(file)):
 			with open(file, 'r') as f:
 				prev_best = float(f.readline())
@@ -65,6 +84,9 @@ def acMain(ac_version):
 	return title
 
 def acUpdate(deltaT):
+	# Receives millisecond updates from AC, recalculates current average speed
+	# When a new lap is detected, the previous average speed is stored in avg_prev
+	# If avg_prev is higher than avg_best, it's a new record
 	global speeds, lap, avg_prev, avg_curr, avg_best, speed, timer
 	timer += deltaT
 	# 60 times per second
@@ -83,18 +105,19 @@ def acUpdate(deltaT):
 		else:
 			speeds.append(speed)
 			avg_curr = average(speeds)
-		updateApp()
+		draw()
 
-def updateApp():
+def draw():
+	# Handles the visual updates
 	global avg_curr, avg_prev, avg_best, speed
-	global com_avg_curr, com_avg_prev, com_avg_best# , com_speed
-	global label_avg_curr, label_avg_prev, label_avg_best# , label_speed
+	global com_avg_curr, com_avg_prev, com_avg_best
+	global label_avg_curr, label_avg_prev, label_avg_best
 	ac.setText(com_avg_curr, label_avg_curr+': '+str(round(avg_curr,1)))
 	ac.setText(com_avg_prev, label_avg_prev+': '+str(round(avg_prev,1)))
 	ac.setText(com_avg_best, label_avg_best+': '+str(round(avg_best,1)))
-	# ac.setText(com_speed, label_speed+': '+str(round(speed,0)))
 
 def acShutdown():
+	# Write any new bests found for the current car/track/layout configuration
 	global title, file, avg_best
 	try:
 		ac.log(title+': SHUTDOWN')
