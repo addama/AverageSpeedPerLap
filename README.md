@@ -1,4 +1,4 @@
-# AverageSpeedPerLap
+# [AverageSpeedPerLap](https://www.racedepartment.com/downloads/averagespeedperlap.48056/)
 Assetto Corsa app that tracks average speed per lap
 
 For future lapping, your best speed per lap, in MPH, is stored in `apps/python/AverageSpeedPerLap/data/` as a `.txt` file
