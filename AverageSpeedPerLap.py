@@ -46,10 +46,10 @@ def parseConfig():
 	cfg.read(config_ini)
 	settings = cfg[config_header]
 
-	use_kph = settings.getboolean('use_kph', use_kph)  
-	use_background = settings.getboolean('use_background', use_background)  
-	use_border = settings.getboolean('use_border', use_border)  
-	is_horizontal = settings.getboolean('is_horizontal', is_horizontal)  
+	use_kph = settings.get('use_kph', use_kph)  
+	use_background = settings.get('use_background', use_background)  
+	use_border = settings.get('use_border', use_border)  
+	is_horizontal = settings.get('is_horizontal', is_horizontal)  
 
 def acMain(ac_version):
 	global title, file, prev_best, avg_best
