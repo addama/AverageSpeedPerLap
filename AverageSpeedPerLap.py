@@ -22,8 +22,6 @@ com_avg_best = 0
 com_avg_curr_label = 0
 com_avg_prev_label = 0
 com_avg_best_label = 0
-to_mph = 0.621371
-to_kph = 1.60934
 label_avg_curr = 'CURR'
 label_avg_prev = 'PREV'
 label_avg_best = 'BEST'
@@ -39,13 +37,14 @@ file = False
 
 average = lambda a: sum(a) / len(a)
 getValidFileName = lambda f: ''.join(c for c in f if c in '-_() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
-convert_to_kph = lambda m: m * to_kph
+convert_to_kph = lambda m: m * 1.60934
 
 def parseConfig():
 	global config_ini, config_header, use_kph
 	cfg = configparser.ConfigParser()
 	cfg.read(config_ini)
-	use_kph = cfg[config_header].get('use_kph', use_kph)  
+	use_kph = cfg[config_header].getboolean('use_kph', use_kph)
+	ac.log(title+': use_kph is '+str(use_kph))
 
 def acMain(ac_version):
 	global title, prev_best, avg_best, avg_curr, avg_prev
@@ -125,26 +124,34 @@ def acUpdate(deltaT):
 		timer = 0
 		currentLap = ac.getCarState(0, acsys.CS.LapCount)
 		speed = ac.getCarState(0, acsys.CS.SpeedMPH)
-		if (currentLap > lap):
-			ac.log(title+': '+str(lap)+': '+str(avg_curr))
-			lap = currentLap
-			avg_prev = avg_curr
-			avg_curr = 0
-			speeds = []
-			if (avg_prev > avg_best):
-				avg_best = avg_prev
-		else:
-			speeds.append(speed)
-			avg_curr = average(speeds)
+		if (speed > 0.99999):
+			if (currentLap > lap):
+				ac.log(title+': '+str(lap)+': '+str(avg_curr))
+				lap = currentLap
+				avg_prev = avg_curr
+				avg_curr = 0
+				speeds = []
+				if (avg_prev > avg_best):
+					avg_best = avg_prev
+			else:
+				speeds.append(speed)
+				avg_curr = average(speeds)
 		draw()
 
 def draw():
 	# Handles the visual updates
-	global avg_curr, avg_prev, avg_best
+	global avg_curr, avg_prev, avg_best, use_kph
 	global com_avg_curr, com_avg_prev, com_avg_best
-	ac.setText(com_avg_curr, str(round(convert_to_kph(avg_curr) if use_kph else avg_curr, 1)))
-	ac.setText(com_avg_prev, str(round(convert_to_kph(avg_prev) if use_kph else avg_prev, 1)))
-	ac.setText(com_avg_best, str(round(convert_to_kph(avg_best) if use_kph else avg_best, 1)))
+	converted_curr = avg_curr
+	converted_prev = avg_prev
+	converted_best = avg_best
+	if (use_kph):
+		converted_curr = convert_to_kph(avg_curr)
+		converted_prev = convert_to_kph(avg_prev)
+		converted_best = convert_to_kph(avg_best)
+	ac.setText(com_avg_curr, str(round(converted_curr, 1)))
+	ac.setText(com_avg_prev, str(round(converted_prev, 1)))
+	ac.setText(com_avg_best, str(round(converted_best, 1)))
 
 def acShutdown():
 	# Write any new bests found for the current car/track/layout configuration
