@@ -13,63 +13,103 @@ config_header = 'SETTINGS'
 data_dir = base_dir+'/data/'
 data_ext = '.txt'
 use_kph = False
-use_background = True
-use_border = False
+background_opacity = 1.0
 is_horizontal = True
 
 # INTERNAL DATA
 com_avg_curr = 0
 com_avg_prev = 0
 com_avg_best = 0
+com_avg_curr_label = 0
+com_avg_prev_label = 0
+com_avg_best_label = 0
+
 label_avg_curr = 'CURR'
 label_avg_prev = 'PREV'
 label_avg_best = 'BEST'
 lap = 0
 speeds = []
 speed = 0
-avg_curr = 0
-avg_prev = 0
-avg_best = 0
+avg_curr = 0.0
+avg_prev = 0.0
+avg_best = 0.0
 prev_best = 0
 timer = 0
 file = False
-state = False
 
 average = lambda a: sum(a) / len(a)
 getValidFileName = lambda f: ''.join(c for c in f if c in '-_() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')
 
 def parseConfig():
-	global config_ini
-	global use_kph, use_background, use_border, is_horizontal
-
+	global config_ini, config_header
+	global use_kph, background_opacity, is_horizontal
 	cfg = configparser.ConfigParser()
 	cfg.read(config_ini)
 	settings = cfg[config_header]
-
 	use_kph = settings.get('use_kph', use_kph)  
-	use_background = settings.get('use_background', use_background)  
-	use_border = settings.get('use_border', use_border)  
-	is_horizontal = settings.get('is_horizontal', is_horizontal)  
+	background_opacity = settings.get('background_opacity', background_opacity)   
+	is_horizontal = settings.get('is_horizontal', is_horizontal)
 
 def acMain(ac_version):
-	global title, file, prev_best, avg_best
+	global title, prev_best, avg_best, avg_curr, avg_prev, background_opacity
+	global data_dir, data_ext, file, config_ini
 	global label_avg_best, label_avg_curr, label_avg_prev
 	global com_avg_best, com_avg_curr, com_avg_prev
+	global com_avg_best_label, com_avg_curr_label, com_avg_prev_label
 	try:
 		if (exists(config_ini)):
 			parseConfig()
+		# ac.initFont(0, "Roboto", 0, 1)
 		app = ac.newApp(title)
-		ac.setSize(app, 100, 120)
+		ac.setSize(app, 310, 33)
 		ac.setIconPosition(app, 0, -10000) # Get rid of the icon
 		ac.setTitle(app, '') # Get rid of the title
-		ac.drawBackground(app, use_background)
-		ac.drawBorder(app, use_border)
-		com_avg_curr = ac.addLabel(app, label_avg_curr+': '+str(avg_curr))
-		com_avg_prev = ac.addLabel(app, label_avg_prev+': '+str(avg_prev))
-		com_avg_best = ac.addLabel(app, label_avg_best+': '+str(avg_best))
-		ac.setPosition(com_avg_curr, 5, 5)
-		ac.setPosition(com_avg_prev, 5, 25)
-		ac.setPosition(com_avg_best, 5, 45)
+		ac.drawBorder(app, 1)
+		# ac.setBackgroundOpacity(app, background_opacity)
+		# ac.drawBackground(app, 1)
+
+		com_avg_curr_label = ac.addLabel(app, label_avg_curr)
+		ac.setPosition(com_avg_curr_label, 5, 5)
+		ac.setSize(com_avg_curr_label, 50, 16)
+		# ac.setCustomFont(com_avg_curr_label, 'Roboto', 0, 1)
+		ac.setFontSize(com_avg_curr_label, 16)
+		ac.setFontAlignment(com_avg_curr_label, 'left')
+
+		com_avg_curr = ac.addLabel(app, str(avg_curr))
+		ac.setPosition(com_avg_curr, 55, 5)
+		ac.setSize(com_avg_curr, 50, 16)
+		# ac.setCustomFont(com_avg_curr, 'Roboto', 0, 1)
+		ac.setFontSize(com_avg_curr, 16)
+		ac.setFontAlignment(com_avg_curr, 'center')
+
+		com_avg_prev_label = ac.addLabel(app, label_avg_prev)
+		ac.setPosition(com_avg_prev_label, 105, 5)
+		ac.setSize(com_avg_prev_label, 50, 16)
+		# ac.setCustomFont(com_avg_prev_label, 'Roboto', 0, 0)
+		ac.setFontSize(com_avg_prev_label, 16)
+		ac.setFontAlignment(com_avg_prev_label, 'left')
+
+		com_avg_prev = ac.addLabel(app, str(avg_prev))
+		ac.setPosition(com_avg_prev, 155, 5)
+		ac.setSize(com_avg_prev, 50, 16)
+		# ac.setCustomFont(com_avg_prev, 'Roboto', 0, 0)
+		ac.setFontSize(com_avg_prev, 16)
+		ac.setFontAlignment(com_avg_prev, 'center')
+
+		com_avg_best_label = ac.addLabel(app, label_avg_best)
+		ac.setPosition(com_avg_best_label, 205, 5)
+		ac.setSize(com_avg_best_label, 50, 16)
+		# ac.setCustomFont(com_avg_best_label, 'Roboto', 0, 0)
+		ac.setFontSize(com_avg_best_label, 16)
+		ac.setFontAlignment(com_avg_best_label, 'left')
+
+		com_avg_best = ac.addLabel(app, str(avg_best))
+		ac.setPosition(com_avg_best, 255, 5)
+		ac.setSize(com_avg_best, 50, 16)
+		# ac.setCustomFont(com_avg_best, 'Roboto', 0, 0)
+		ac.setFontSize(com_avg_best, 16)
+		ac.setFontAlignment(com_avg_best, 'center')
+
 		car = ac.getCarName(0)
 		track = ac.getTrackName(0)
 		layout = ac.getTrackConfiguration(0)
@@ -87,7 +127,7 @@ def acUpdate(deltaT):
 	# Receives millisecond updates from AC, recalculates current average speed
 	# When a new lap is detected, the previous average speed is stored in avg_prev
 	# If avg_prev is higher than avg_best, it's a new record
-	global speeds, lap, avg_prev, avg_curr, avg_best, speed, timer
+	global speeds, lap, avg_prev, avg_curr, avg_best, speed, timer, use_kph
 	timer += deltaT
 	# 60 times per second
 	if (timer > 0.0166):
@@ -109,16 +149,15 @@ def acUpdate(deltaT):
 
 def draw():
 	# Handles the visual updates
-	global avg_curr, avg_prev, avg_best, speed
+	global avg_curr, avg_prev, avg_best
 	global com_avg_curr, com_avg_prev, com_avg_best
-	global label_avg_curr, label_avg_prev, label_avg_best
-	ac.setText(com_avg_curr, label_avg_curr+': '+str(round(avg_curr,1)))
-	ac.setText(com_avg_prev, label_avg_prev+': '+str(round(avg_prev,1)))
-	ac.setText(com_avg_best, label_avg_best+': '+str(round(avg_best,1)))
+	ac.setText(com_avg_curr, str(round(avg_curr,1)))
+	ac.setText(com_avg_prev, str(round(avg_prev,1)))
+	ac.setText(com_avg_best, str(round(avg_best,1)))
 
 def acShutdown():
 	# Write any new bests found for the current car/track/layout configuration
-	global title, file, avg_best
+	global title, file, avg_best, prev_best
 	try:
 		ac.log(title+': SHUTDOWN')
 		if (avg_best > 0 and avg_best > prev_best):
